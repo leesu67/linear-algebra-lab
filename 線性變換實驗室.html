@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>線性變換實驗室</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; overflow-x: hidden; }
+        .grid-bg { background-image: linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px); background-size: 20px 20px; }
+        .smooth-transform { transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        input[type="range"] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #4f46e5); margin-top: -8px; cursor: pointer; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.4); border: 2px solid white; }
+        input[type="range"]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: linear-gradient(to right, #cbd5e1, #94a3b8); border-radius: 3px; }
+        .matrix-container { position: relative; padding: 0 25px; }
+        .matrix-container::before, .matrix-container::after { content: ''; position: absolute; top: 5%; bottom: 5%; width: 8px; background: linear-gradient(to right, #1f2937, #374151); border-radius: 4px; }
+        .matrix-container::before { left: 0; background: linear-gradient(to right, #1f2937, #4b5563); }
+        .matrix-container::after { right: 0; background: linear-gradient(to left, #1f2937, #4b5563); }
+        .matrix-cell { min-width: 50px; text-align: center; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState } = React;
+
+        const ShapeViewer = ({ matrix, shapeType, showGrid = true }) => {
+            const [a, b, c, d] = matrix;
+            // 使用標準矩陣格式 matrix(a, b, c, d, 0, 0)
+            // 與數學標準一致：newX = a*x + b*y, newY = c*x + d*y
+            const transformString = `matrix(${a}, ${b}, ${c}, ${d}, 0, 0)`;
+
+            const getPath = () => {
+                switch(shapeType) {
+                    case 'square': return "M -1,-1 L 1,-1 L 1,1 L -1,1 Z";
+                    case 'triangle': return "M 0,-1.5 L 1.5,1.5 L -1.5,1.5 Z";
+                    case 'arrow': return "M 0,-1.5 L 1,0 L 0.3,0 L 0.3,1.5 L -0.3,1.5 L -0.3,0 L -1,0 Z";
+                    case 'f': return "M -0.5,-1 L 0.5,-1 L 0.5,0 L 1.5,0 L 1.5,1 L -1.5,1 L -1.5,0 L -0.5,0 Z";
+                    case 'star': return "M 0,-1.5 L 0.35,-0.5 L 1.4,-0.5 L 0.6,0.2 L 0.9,1.2 L 0,0.6 L -0.9,1.2 L -0.6,0.2 L -1.4,-0.5 L -0.35,-0.5 Z";
+                    default: return "M 0,-1 C 1,-2 2.5,-0.5 0,1.5 C -2.5,-0.5 -1,-2 0,-1 Z";
+                }
+            };
+
+            return (
+                <svg viewBox="-4 -4 8 8" className="w-full h-full overflow-visible">
+                    <line x1="-10" y1="0" x2="10" y2="0" stroke="#9CA3AF" strokeWidth="0.03" />
+                    <line x1="0" y1="-10" x2="0" y2="10" stroke="#9CA3AF" strokeWidth="0.03" />
+                    {showGrid && Array.from({length: 9}).map((_, i) => {
+                        const v = i - 4;
+                        return (
+                            <g key={`grid-${i}`}>
+                                <line x1={v} y1="-4" x2={v} y2="4" stroke="#f3f4f6" strokeWidth="0.01" />
+                                <line x1="-4" y1={v} x2="4" y2={v} stroke="#f3f4f6" strokeWidth="0.01" />
+                            </g>
+                        );
+                    })}
+                    <g transform={transformString} className="smooth-transform">
+                        <path d={getPath()} fill="rgba(99, 102, 241, 0.25)" stroke="#4f46e5" strokeWidth="0.06" strokeLinejoin="round" />
+                        {shapeType === 'heart' && (
+                            <>
+                                <circle cx="-0.4" cy="-0.4" r="0.12" fill="#4f46e5" />
+                                <circle cx="0.4" cy="-0.4" r="0.12" fill="#4f46e5" />
+                                <path d="M -0.15,0.15 Q 0,0.4 0.15,0.15" fill="none" stroke="#4f46e5" strokeWidth="0.04" />
+                            </>
+                        )}
+                        <circle cx="0" cy="0" r="0.08" fill="#374151" />
+                    </g>
+                    {/* î 向量 - 紅色 */}
+                    <g className="smooth-transform">
+                        <line x1="0" y1="0" x2={a} y2={-c} stroke="#ef4444" strokeWidth="0.08" />
+                        <polygon points={`${a},${-c} ${a - 0.15*c - 0.15*a},${-c - 0.15*a + 0.15*c} ${a + 0.15*c - 0.15*a},${-c + 0.15*a + 0.15*c}`} fill="#ef4444" />
+                        <text x={a * 0.5 + 0.2} y={-c * 0.5 + 0.2} fill="#ef4444" fontSize="0.35" fontWeight="bold">î</text>
+                    </g>
+                    {/* ĵ 向量 - 綠色 */}
+                    <g className="smooth-transform">
+                        <line x1="0" y1="0" x2={b} y2={-d} stroke="#10b981" strokeWidth="0.08" />
+                        <polygon points={`${b},${-d} ${b - 0.15*d - 0.15*b},${-d - 0.15*b + 0.15*d} ${b + 0.15*d - 0.15*b},${-d + 0.15*b + 0.15*d}`} fill="#10b981" />
+                        <text x={b * 0.5 + 0.2} y={-d * 0.5 + 0.2} fill="#10b981" fontSize="0.35" fontWeight="bold">ĵ</text>
+                    </g>
+                    {/* 原始坐標系虛線 */}
+                    <g opacity="0.3">
+                        <line x1="0" y1="0" x2="1" y2="0" stroke="#ef4444" strokeWidth="0.03" strokeDasharray="0.1,0.05" />
+                        <line x1="0" y1="0" x2="0" y2="-1" stroke="#10b981" strokeWidth="0.03" strokeDasharray="0.1,0.05" />
+                    </g>
+                </svg>
+            );
+        };
+
+        const MatrixMultiplication = ({ matrixA, matrixB, result }) => {
+            const [a1, a2, a3, a4] = matrixA;
+            const [b1, b2, b3, b4] = matrixB;
+            const [r1, r2, r3, r4] = result;
+            
+            return (
+                <div className="bg-white rounded-xl border border-gray-200 p-4 mt-4">
+                    <h3 className="font-bold text-gray-800 mb-3 flex items-center">
+                        <i className="fas fa-times mr-2 text-indigo-600"></i> 矩陣乘法 A × B = C
+                    </h3>
+                    <div className="flex items-center justify-center gap-3 text-sm md:text-base flex-wrap">
+                        <div className="matrix-container">
+                            <div className="flex flex-col text-indigo-600 font-bold">
+                                <div className="flex"><span className="matrix-cell">{a1}</span><span className="matrix-cell">{a2}</span></div>
+                                <div className="flex"><span className="matrix-cell">{a3}</span><span className="matrix-cell">{a4}</span></div>
+                            </div>
+                        </div>
+                        <span className="text-2xl font-bold text-gray-400">×</span>
+                        <div className="matrix-container">
+                            <div className="flex flex-col text-pink-600 font-bold">
+                                <div className="flex"><span className="matrix-cell">{b1}</span><span className="matrix-cell">{b2}</span></div>
+                                <div className="flex"><span className="matrix-cell">{b3}</span><span className="matrix-cell">{b4}</span></div>
+                            </div>
+                        </div>
+                        <span className="text-2xl font-bold text-gray-400">=</span>
+                        <div className="matrix-container">
+                            <div className="flex flex-col text-green-600 font-bold">
+                                <div className="flex"><span className="matrix-cell">{r1}</span><span className="matrix-cell">{r2}</span></div>
+                                <div className="flex"><span className="matrix-cell">{r3}</span><span className="matrix-cell">{r4}</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs md:text-sm font-mono">
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>c₁₁ = {a1}×{b1} + {a2}×{b3} = <span className="text-green-600 font-bold">{r1}</span></div>
+                            <div>c₁₂ = {a1}×{b2} + {a2}×{b4} = <span className="text-green-600 font-bold">{r2}</span></div>
+                            <div>c₂₁ = {a3}×{b1} + {a4}×{b3} = <span className="text-green-600 font-bold">{r3}</span></div>
+                            <div>c₂₂ = {a3}×{b2} + {a4}×{b4} = <span className="text-green-600 font-bold">{r4}</span></div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const presets = {
+            identity: { name: "🏠 單位矩陣", m: [1, 0, 0, 1], desc: "維持原狀，不做任何改變。", category: "基本" },
+            zero: { name: "💫 零矩陣", m: [0, 0, 0, 0], desc: "所有點都映射到原點。", category: "基本" },
+            scale2: { name: "🔍 放大 2 倍", m: [2, 0, 0, 2], desc: "所有向量長度放大 2 倍。", category: "縮放" },
+            scale05: { name: "📉 縮小 0.5", m: [0.5, 0, 0, 0.5], desc: "所有向量長度縮小一半。", category: "縮放" },
+            scaleX2: { name: "↔️ X軸放大", m: [2, 0, 0, 1], desc: "水平方向放大 2 倍。", category: "縮放" },
+            scaleY2: { name: "↕️ Y軸放大", m: [1, 0, 0, 2], desc: "垂直方向放大 2 倍。", category: "縮放" },
+            reflectX: { name: "🔄 X軸鏡射", m: [1, 0, 0, -1], desc: "上下翻轉（Y軸對稱）。", category: "鏡射" },
+            reflectY: { name: "↔️ Y軸鏡射", m: [-1, 0, 0, 1], desc: "左右翻轉（X軸對稱）。", category: "鏡射" },
+            reflectYeqX: { name: "💚 Y=X 鏡射", m: [0, 1, 1, 0], desc: "對角線鏡射，(x,y)→(y,x)。", category: "鏡射" },
+            reflectYeqNegX: { name: "💜 Y=-X 鏡射", m: [0, -1, -1, 0], desc: "反對角線鏡射，(x,y)→(-y,-x)。", category: "鏡射" },
+            reflectOrigin: { name: "🔵 原點對稱", m: [-1, 0, 0, -1], desc: "繞原點旋轉 180°。", category: "鏡射" },
+            rotate90: { name: "🔁 旋轉 90°", m: [0, -1, 1, 0], desc: "逆時針旋轉 90 度。", category: "旋轉" },
+            rotate45: { name: "🔁 旋轉 45°", m: [0.71, -0.71, 0.71, 0.71], desc: "逆時針旋轉 45 度。", category: "旋轉" },
+            rotate30: { name: "🔁 旋轉 30°", m: [0.87, -0.5, 0.5, 0.87], desc: "逆時針旋轉 30 度。", category: "旋轉" },
+            rotate60: { name: "🔁 旋轉 60°", m: [0.5, -0.87, 0.87, 0.5], desc: "逆時針旋轉 60 度。", category: "旋轉" },
+            rotate180: { name: "🔁 旋轉 180°", m: [-1, 0, 0, -1], desc: "旋轉 180 度。", category: "旋轉" },
+            rotateNeg45: { name: "🔁 旋轉 -45°", m: [0.71, 0.71, -0.71, 0.71], desc: "順時針旋轉 45 度。", category: "旋轉" },
+            shearX: { name: "↗️ X軸推移", m: [1, 1, 0, 1], desc: "水平歪斜。", category: "推移" },
+            shearY: { name: "↘️ Y軸推移", m: [1, 0, 1, 1], desc: "垂直歪斜。", category: "推移" },
+            projectionX: { name: "📨 投影到 X", m: [1, 0, 0, 0], desc: "壓扁到 X 軸。", category: "特殊" },
+            projectionY: { name: "📨 投影到 Y", m: [0, 0, 0, 1], desc: "壓扁到 Y 軸。", category: "特殊" },
+        };
+
+        const multiplicationPresets = [
+            { name: "旋轉90° × 鏡射", a: [0, -1, 1, 0], b: [1, 0, 0, -1], desc: "先旋轉再鏡射" },
+            { name: "放大 × 推移", a: [2, 0, 0, 2], b: [1, 1, 0, 1], desc: "先放大再推移" },
+            { name: "鏡射 × 旋轉", a: [-1, 0, 0, 1], b: [0, -1, 1, 0], desc: "先鏡射再旋轉" },
+            { name: "單位 × 放大", a: [1, 0, 0, 1], b: [1.5, 0, 0, 1.5], desc: "恆等變換" },
+        ];
+
+        const App = () => {
+            const [matrix, setMatrix] = useState([1, 0, 0, 1]);
+            const [matrixB, setMatrixB] = useState([1, 1, 0, 1]);
+            const [shapeType, setShapeType] = useState('heart');
+            const [infoMsg, setInfoMsg] = useState({ title: "🎲 歡迎", desc: "拖動滑桿或點擊按鈕探索矩陣！" });
+            const [showMultiplication, setShowMultiplication] = useState(false);
+            const [activeCategory, setActiveCategory] = useState('all');
+
+            const det = matrix[0] * matrix[3] - matrix[1] * matrix[2];
+
+            const multiplyMatrices = (A, B) => {
+                return [
+                    A[0]*B[0] + A[1]*B[2], A[0]*B[1] + A[1]*B[3],
+                    A[2]*B[0] + A[3]*B[2], A[2]*B[1] + A[3]*B[3]
+                ];
+            };
+            const resultMatrix = multiplyMatrices(matrix, matrixB);
+
+            const updateMatrixIndex = (index, value) => {
+                const newMatrix = [...matrix];
+                newMatrix[index] = parseFloat(value);
+                setMatrix(newMatrix);
+            };
+
+            const updateMatrixBIndex = (index, value) => {
+                const newMatrix = [...matrixB];
+                newMatrix[index] = parseFloat(value);
+                setMatrixB(newMatrix);
+            };
+
+            const applyPreset = (preset) => {
+                setMatrix(preset.m);
+                setInfoMsg({ title: preset.name, desc: preset.desc });
+            };
+
+            const applyMultiplicationPreset = (preset) => {
+                setMatrix(preset.a);
+                setMatrixB(preset.b);
+                setInfoMsg({ title: preset.name, desc: preset.desc });
+            };
+
+            const handleReset = () => {
+                setMatrix([1, 0, 0, 1]);
+                setMatrixB([1, 0, 0, 1]);
+            };
+
+            const randomMatrix = () => {
+                const rand = () => (Math.random() * 4 - 2).toFixed(1);
+                setMatrix([parseFloat(rand()), parseFloat(rand()), parseFloat(rand()), parseFloat(rand())]);
+            };
+
+            const filteredPresets = activeCategory === 'all' ? presets : Object.fromEntries(Object.entries(presets).filter(([_, v]) => v.category === activeCategory));
+            const matrixLabels = ['a', 'b', 'c', 'd'];
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 pb-10">
+                    <header className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-white shadow-lg py-5 mb-6">
+                        <div className="container mx-auto px-4 text-center">
+                            <h1 className="text-2xl md:text-4xl font-bold mb-2">
+                                <i className="fas fa-shapes mr-2"></i> 2D 線性變換實驗室
+                            </h1>
+                            <p className="text-indigo-100 text-sm md:text-base">探索矩陣如何改變形狀、方向與面積</p>
+                            <p className="text-indigo-200 text-xs md:text-sm mt-2">👨‍🏫 李向宇老師製作</p>
+                        </div>
+                    </header>
+
+                    <main className="container mx-auto px-3 md:px-4 flex flex-col lg:flex-row gap-4 lg:gap-8">
+                        {/* 左側：視覺化區域 */}
+                        <div className="flex-1 bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 flex flex-col" style={{minHeight: '450px'}}>
+                            <div className="p-3 md:p-4 bg-gray-50 border-b flex flex-wrap justify-between items-center gap-2">
+                                <span className="font-bold text-gray-600 text-sm md:text-base">
+                                    <i className="fas fa-eye mr-2"></i>視覺化預覽
+                                </span>
+                                <div className="flex gap-1 md:gap-2 flex-wrap">
+                                    {[
+                                        {key: 'heart', icon: '❤️'},
+                                        {key: 'square', icon: '⬜'},
+                                        {key: 'triangle', icon: '🔺'},
+                                        {key: 'star', icon: '⭐'},
+                                        {key: 'arrow', icon: '➡️'},
+                                        {key: 'f', icon: 'F'}
+                                    ].map(({key, icon}) => (
+                                        <button key={key} onClick={() => setShapeType(key)} className={`px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium transition-all ${shapeType === key ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border hover:bg-gray-50 text-gray-600'}`}>
+                                            {icon}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex-1 relative bg-white grid-bg flex items-center justify-center p-3 md:p-4">
+                                <div className="w-full h-full max-w-sm max-h-sm">
+                                    <ShapeViewer matrix={matrix} shapeType={shapeType} />
+                                </div>
+                                <div className="absolute bottom-2 md:bottom-4 right-2 md:right-4 bg-white/95 backdrop-blur-sm p-2 md:p-4 rounded-xl shadow-lg border text-xs md:text-sm text-gray-600 max-w-[180px]">
+                                    <strong className="text-gray-800 block mb-1 md:mb-2">💡 觀察重點：</strong>
+                                    <div className="space-y-1">
+                                        <p className="flex items-center">
+                                            <span className="w-2.5 h-2.5 rounded-full bg-red-500 mr-1.5 flex-shrink-0"></span>
+                                            î → ({matrix[0].toFixed(2)}, {matrix[2].toFixed(2)})
+                                        </p>
+                                        <p className="flex items-center">
+                                            <span className="w-2.5 h-2.5 rounded-full bg-green-500 mr-1.5 flex-shrink-0"></span>
+                                            ĵ → ({matrix[1].toFixed(2)}, {matrix[3].toFixed(2)})
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 右側：控制區域 */}
+                        <div className="w-full lg:w-96 flex flex-col gap-4">
+                            {/* 矩陣 A 控制 */}
+                            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 md:p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-lg md:text-xl font-bold text-gray-800">矩陣 A</h2>
+                                    <button onClick={randomMatrix} className="text-xs md:text-sm px-2 md:px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition">
+                                        <i className="fas fa-dice mr-1"></i>隨機
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center justify-center mb-4 md:mb-6 py-4">
+                                    <div className="text-4xl md:text-5xl font-serif text-gray-800">
+                                        <div className="matrix-container" style={{padding: '0 35px'}}>
+                                            <div className="flex flex-col items-center gap-1 mx-1">
+                                                <div className="flex gap-4 md:gap-6">
+                                                    <span className="w-12 md:w-14 text-center text-indigo-600 font-bold text-xl md:text-2xl">{matrix[0].toFixed(1)}</span>
+                                                    <span className="w-12 md:w-14 text-center text-indigo-600 font-bold text-xl md:text-2xl">{matrix[1].toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex gap-4 md:gap-6">
+                                                    <span className="w-12 md:w-14 text-center text-indigo-600 font-bold text-xl md:text-2xl">{matrix[2].toFixed(1)}</span>
+                                                    <span className="w-12 md:w-14 text-center text-indigo-600 font-bold text-xl md:text-2xl">{matrix[3].toFixed(1)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3 md:space-y-4">
+                                    {matrixLabels.map((label, idx) => (
+                                        <div key={label} className="flex items-center gap-2 md:gap-3">
+                                            <span className="font-mono font-bold text-gray-600 w-6 md:w-8 text-sm md:text-base">{label}:</span>
+                                            <input type="range" min="-3" max="3" step="0.1" value={matrix[idx]} onChange={(e) => updateMatrixIndex(idx, e.target.value)} className="flex-1 h-10" />
+                                            <span className="w-12 md:w-14 text-right font-mono text-indigo-600 font-bold text-sm md:text-base">{matrix[idx].toFixed(1)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-bold text-gray-500">行列式:</span>
+                                        <span className={`font-mono font-bold text-lg ${Math.abs(det) < 0.01 ? 'text-red-500' : det < 0 ? 'text-orange-500' : 'text-green-600'}`}>
+                                            {det.toFixed(2)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 矩陣乘法展示 */}
+                            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4">
+                                <button onClick={() => setShowMultiplication(!showMultiplication)} className="w-full flex items-center justify-between text-left">
+                                    <span className="font-bold text-gray-800">
+                                        <i className="fas fa-calculator mr-2 text-indigo-600"></i>矩陣乘法展示
+                                    </span>
+                                    <span className={`transform transition-transform ${showMultiplication ? 'rotate-180' : ''}`}>
+                                        <i className="fas fa-chevron-down text-gray-400"></i>
+                                    </span>
+                                </button>
+
+                                {showMultiplication && (
+                                    <div className="mt-4">
+                                        <div className="mb-4">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-sm font-bold text-pink-600">矩陣 B (右乘)</span>
+                                                <button onClick={() => setMatrixB([1, 0, 0, 1])} className="text-xs text-gray-400 hover:text-gray-600">重置</button>
+                                            </div>
+                                            <div className="flex items-center justify-center mb-3 py-2">
+                                                <div className="text-2xl font-serif text-gray-800">
+                                                    <div className="matrix-container">
+                                                        <div className="flex flex-col items-center gap-0.5 mx-1">
+                                                            <div className="flex gap-2">
+                                                                <span className="w-8 text-center text-pink-600 font-bold">{matrixB[0].toFixed(1)}</span>
+                                                                <span className="w-8 text-center text-pink-600 font-bold">{matrixB[1].toFixed(1)}</span>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <span className="w-8 text-center text-pink-600 font-bold">{matrixB[2].toFixed(1)}</span>
+                                                                <span className="w-8 text-center text-pink-600 font-bold">{matrixB[3].toFixed(1)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            {matrixLabels.map((label, idx) => (
+                                                <div key={label} className="flex items-center gap-2">
+                                                    <span className="font-mono font-bold text-pink-600 w-5 text-sm">{label}:</span>
+                                                    <input type="range" min="-3" max="3" step="0.1" value={matrixB[idx]} onChange={(e) => updateMatrixBIndex(idx, e.target.value)} className="flex-1 h-8" />
+                                                    <span className="w-10 text-right font-mono text-pink-600 font-bold text-sm">{matrixB[idx].toFixed(1)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <MatrixMultiplication matrixA={matrix} matrixB={matrixB} result={resultMatrix} />
+
+                                        <div className="mt-4">
+                                            <span className="text-xs font-bold text-gray-500 mb-2 block">快速範例：</span>
+                                            <div className="flex flex-wrap gap-2">
+                                                {multiplicationPresets.map((preset, idx) => (
+                                                    <button key={idx} onClick={() => applyMultiplicationPreset(preset)} className="px-2 py-1 text-xs bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg border border-amber-200 transition">
+                                                        {preset.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 變換特效 */}
+                            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 md:p-6 flex-1">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-lg md:text-xl font-bold text-gray-800">
+                                        <i className="fas fa-magic mr-2 text-yellow-500"></i> 變換特效
+                                    </h2>
+                                    <button onClick={handleReset} className="text-xs md:text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition">
+                                        <i className="fas fa-redo mr-1"></i>重置
+                                    </button>
+                                </div>
+
+                                <div className="flex gap-1 md:gap-2 mb-3 flex-wrap">
+                                    {['all', '基本', '縮放', '鏡射', '旋轉', '推移', '特殊'].map(cat => (
+                                        <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium transition ${activeCategory === cat ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                                            {cat === 'all' ? '全部' : cat}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="flex flex-wrap gap-2 mb-4 max-h-48 overflow-y-auto">
+                                    {Object.entries(filteredPresets).map(([key, val]) => (
+                                        <button key={key} onClick={() => applyPreset(val)} className="px-2 md:px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium text-xs md:text-sm border border-indigo-100 transition">
+                                            {val.name}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="p-3 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-orange-100">
+                                    <h3 className="font-bold text-orange-800 mb-1 flex items-center text-sm">
+                                        <i className="fas fa-lightbulb mr-2"></i> {infoMsg.title}
+                                    </h3>
+                                    <p className="text-sm text-orange-700">{infoMsg.desc}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+
+                    <footer className="text-center py-6 text-gray-400 text-sm">
+                        <p>🎓 線性變換實驗室 | 讓數學變得更直觀</p>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

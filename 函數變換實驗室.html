@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>函數變換實驗室</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Microsoft JhengHei', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+.container { max-width: 1200px; margin: 0 auto; }
+h1 { text-align: center; color: white; font-size: 28px; margin-bottom: 10px; }
+.subtitle { text-align: center; color: rgba(255,255,255,0.9); margin-bottom: 20px; }
+.main-content { display: flex; flex-wrap: wrap; gap: 20px; }
+.panel { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+.left-panel { flex: 1; min-width: 350px; }
+.right-panel { width: 380px; }
+.panel-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 15px; }
+.type-buttons, .shape-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+.type-btn, .shape-btn { padding: 8px 16px; border: none; border-radius: 20px; background: #f0f0f0; color: #555; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+.type-btn:hover, .shape-btn:hover { background: #e0e0e0; }
+.type-btn.active, .shape-btn.active { background: #667eea; color: white; }
+.shape-btn { width: 40px; height: 40px; font-size: 18px; }
+.canvas-container { width: 100%; height: 400px; background: #fafafa; border-radius: 12px; border: 2px solid #eee; position: relative; }
+canvas { width: 100%; height: 100%; display: block; }
+.matrix-display { display: flex; justify-content: center; align-items: center; font-size: 42px; font-family: serif; color: #333; margin: 20px 0; }
+.matrix-bracket { display: flex; flex-direction: column; gap: 8px; padding: 10px 25px; background: linear-gradient(to right, #333, #666); border-radius: 8px; }
+.matrix-values { display: flex; gap: 40px; }
+.matrix-cell { color: #667eea; font-weight: bold; min-width: 45px; text-align: center; }
+.slider-group { margin-bottom: 12px; }
+.slider-label { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
+.slider-label span:first-child { color: #666; font-weight: bold; }
+.slider-label span:last-child { color: #667eea; font-weight: bold; }
+input[type="range"] { width: 100%; height: 8px; border-radius: 4px; background: linear-gradient(to right, #ddd, #aaa); outline: none; -webkit-appearance: none; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); cursor: pointer; box-shadow: 0 2px 6px rgba(102, 126, 234, 0.5); border: 2px solid white; }
+.det-display { display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #eee; margin-top: 15px; }
+.det-label { font-weight: bold; color: #666; }
+.det-value { font-size: 20px; font-weight: bold; }
+.det-positive { color: #10b981; }
+.det-negative { color: #f59e0b; }
+.det-zero { color: #ef4444; }
+.preset-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; max-height: 200px; overflow-y: auto; }
+.preset-btn { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; background: white; color: #555; cursor: pointer; font-size: 13px; transition: all 0.3s; }
+.preset-btn:hover { background: #f0edff; border-color: #667eea; }
+.info-box { background: linear-gradient(135deg, #fef3c7, #fde68a); padding: 12px; border-radius: 10px; margin-top: 15px; border: 1px solid #fcd34d; }
+.info-title { font-weight: bold; color: #92400e; margin-bottom: 5px; }
+.info-desc { color: #a16207; font-size: 14px; }
+.button-row { display: flex; gap: 10px; margin-bottom: 15px; }
+.btn-random, .btn-reset { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+.btn-random { background: #8b5cf6; color: white; }
+.btn-random:hover { background: #7c3aed; }
+.btn-reset { background: #e5e7eb; color: #555; }
+.btn-reset:hover { background: #d1d5db; }
+.vector-info { position: absolute; bottom: 10px; right: 10px; background: rgba(255,255,255,0.95); padding: 10px; border-radius: 10px; font-size: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+.vector-info p { margin: 3px 0; }
+.vector-red { color: #ef4444; font-weight: bold; }
+.vector-green { color: #10b981; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>📐 2D 函數變換實驗室</h1>
+<p class="subtitle">探索矩陣如何改變函數圖形</p>
+<div class="main-content">
+<div class="panel left-panel">
+<div class="panel-title">👁️ 視覺化預覽</div>
+<div class="type-buttons">
+<button class="type-btn active" data-type="exponential">📈 指數</button>
+<button class="type-btn" data-type="logarithmic">📉 對數</button>
+<button class="type-btn" data-type="parabola">🔺 拋物線</button>
+<button class="type-btn" data-type="ellipse">⬭ 橢圓</button>
+<button class="type-btn" data-type="hyperbola">⋕ 雙曲線</button>
+</div>
+<div class="canvas-container"><canvas id="canvas"></canvas>
+<div class="vector-info" id="vectorInfo">
+<p><span class="vector-red">紅 î</span> → (1.0, 0.0)</p>
+<p><span class="vector-green">綠 ĵ</span> → (0.0, 1.0)</p>
+</div>
+</div>
+</div>
+<div class="panel right-panel">
+<div class="panel-title">🔢 矩陣 A</div>
+<div class="button-row">
+<button class="btn-random" onclick="randomMatrix()">🎲 隨機</button>
+<button class="btn-reset" onclick="resetMatrix()">🔄 重置</button>
+</div>
+<div class="matrix-display">
+<span style="color:#333;font-size:32px;">[</span>
+<div class="matrix-bracket">
+<div class="matrix-values">
+<div class="matrix-cell" id="cell0">1.0</div>
+<div class="matrix-cell" id="cell1">0.0</div>
+</div>
+<div class="matrix-values">
+<div class="matrix-cell" id="cell2">0.0</div>
+<div class="matrix-cell" id="cell3">1.0</div>
+</div>
+</div>
+<span style="color:#333;font-size:32px;">]</span>
+</div>
+<div class="slider-group">
+<div class="slider-label"><span>a:</span><span id="val0">1.0</span></div>
+<input type="range" id="slider0" min="-3" max="3" step="0.1" value="1">
+</div>
+<div class="slider-group">
+<div class="slider-label"><span>b:</span><span id="val1">0.0</span></div>
+<input type="range" id="slider1" min="-3" max="3" step="0.1" value="0">
+</div>
+<div class="slider-group">
+<div class="slider-label"><span>c:</span><span id="val2">0.0</span></div>
+<input type="range" id="slider2" min="-3" max="3" step="0.1" value="0">
+</div>
+<div class="slider-group">
+<div class="slider-label"><span>d:</span><span id="val3">1.0</span></div>
+<input type="range" id="slider3" min="-3" max="3" step="0.1" value="1">
+</div>
+<div class="det-display">
+<span class="det-label">行列式 (det):</span>
+<span class="det-value det-positive" id="detValue">1.00</span>
+</div>
+<div class="panel-title" style="margin-top:20px;">✨ 變換特效</div>
+<div class="preset-buttons" id="presets"></div>
+<div class="info-box">
+<div class="info-title" id="infoTitle">🏠 單位矩陣</div>
+<div class="info-desc" id="infoDesc">維持原狀，不做任何改變。</div>
+</div>
+</div>
+</div>
+</div>
+<footer style="text-align:center;padding:20px;color:rgba(255,255,255,0.7);">
+<p>🎓 函數變換實驗室 | 讓數學變得更直觀</p>
+</footer>
+<script>
+var matrix=[1,0,0,1],transformType='exponential',shapeType='heart',canvas,ctx;
+// 修正：旋轉矩陣應該使用標準格式 [cos(θ), -sin(θ), sin(θ), cos(θ)]
+var presets=[
+{name:"🏠 單位矩陣",m:[1,0,0,1],desc:"維持原狀"},
+{name:"💫 零矩陣",m:[0,0,0,0],desc:"所有點映射到原點"},
+{name:"🔍 放大 2x",m:[2,0,0,2],desc:"所有向量放大 2 倍"},
+{name:"📉 縮小 0.5x",m:[0.5,0,0,0.5],desc:"所有向量縮小一半"},
+{name:"↔️ X軸放大",m:[2,0,0,1],desc:"水平放大 2 倍"},
+{name:"↕️ Y軸放大",m:[1,0,0,2],desc:"垂直放大 2 倍"},
+{name:"🔄 X軸鏡射",m:[1,0,0,-1],desc:"上下翻轉"},
+{name:"↔️ Y軸鏡射",m:[-1,0,0,1],desc:"左右翻轉"},
+{name:"💚 Y=X 鏡射",m:[0,1,1,0],desc:"對角線鏡射"},
+{name:"💜 Y=-X 鏡射",m:[0,-1,-1,0],desc:"反對角線鏡射"},
+{name:"🔵 原點對稱",m:[-1,0,0,-1],desc:"繞原點旋轉 180°"},
+// 修正：旋轉 90° = [cos(90°), -sin(90°), sin(90°), cos(90°)] = [0, -1, 1, 0]
+{name:"🔁 旋轉 90°",m:[0,-1,1,0],desc:"逆時針 90°"},
+// 修正：旋轉 45° = [0.71, -0.71, 0.71, 0.71]
+{name:"🔁 旋轉 45°",m:[0.71,-0.71,0.71,0.71],desc:"逆時針 45°"},
+// 修正：旋轉 30° = [0.87, -0.5, 0.5, 0.87]
+{name:"🔁 旋轉 30°",m:[0.87,-0.5,0.5,0.87],desc:"逆時針 30°"},
+// 修正：旋轉 60° = [0.5, -0.87, 0.87, 0.5]
+{name:"🔁 旋轉 60°",m:[0.5,-0.87,0.87,0.5],desc:"逆時針 60°"},
+// 修正：順時針旋轉 -45° = [cos(-45°), -sin(-45°), sin(-45°), cos(-45°)] = [0.71, 0.71, -0.71, 0.71]
+{name:"🔁 旋轉 -45°",m:[0.71,0.71,-0.71,0.71],desc:"順時針 45°"},
+{name:"↗️ X推移",m:[1,1,0,1],desc:"水平歪斜"},
+{name:"↘️ Y推移",m:[1,0,1,1],desc:"垂直歪斜"}
+];
+function init(){canvas=document.getElementById('canvas');ctx=canvas.getContext('2d');resizeCanvas();generatePresetButtons();for(var i=0;i<4;i++)document.getElementById('slider'+i).addEventListener('input',function(e){matrix[parseInt(this.id.substr(6))]=parseFloat(e.target.value);updateDisplay();draw();});document.querySelectorAll('.type-btn').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.type-btn').forEach(function(x){x.classList.remove('active')});this.classList.add('active');transformType=this.getAttribute('data-type');draw();})});window.addEventListener('resize',resizeCanvas);updateDisplay();draw();}
+function generatePresetButtons(){var p=document.getElementById('presets');p.innerHTML='';presets.forEach(function(x,i){var b=document.createElement('button');b.className='preset-btn';b.textContent=x.name;b.onclick=function(){matrix=x.m.slice();updateDisplay();draw();document.getElementById('infoTitle').textContent=x.name;document.getElementById('infoDesc').textContent=x.desc;};p.appendChild(b);});}
+function resizeCanvas(){var c=document.querySelector('.canvas-container');canvas.width=c.clientWidth;canvas.height=c.clientHeight;draw();}
+function updateDisplay(){for(var i=0;i<4;i++){document.getElementById('cell'+i).textContent=matrix[i].toFixed(1);document.getElementById('val'+i).textContent=matrix[i].toFixed(1);document.getElementById('slider'+i).value=matrix[i];}var det=matrix[0]*matrix[3]-matrix[1]*matrix[2];var d=document.getElementById('detValue');d.textContent=det.toFixed(2);d.className='det-value '+(Math.abs(det)<0.01?'det-zero':det<0?'det-negative':'det-positive');document.getElementById('vectorInfo').innerHTML='<p><span class="vector-red">紅 î</span> → ('+matrix[0].toFixed(2)+', '+matrix[2].toFixed(2)+')</p><p><span class="vector-green">綠 ĵ</span> → ('+matrix[1].toFixed(2)+', '+matrix[3].toFixed(2)+')</p>';}
+function resetMatrix(){matrix=[1,0,0,1];updateDisplay();draw();document.getElementById('infoTitle').textContent='🏠 單位矩陣';document.getElementById('infoDesc').textContent='維持原狀，不做任何改變。';}
+function randomMatrix(){var r=function(){return(Math.random()*4-2).toFixed(1);};matrix=[parseFloat(r()),parseFloat(r()),parseFloat(r()),parseFloat(r())];updateDisplay();draw();}
+// 修正：標準矩陣變換公式 newX = a*x + b*y, newY = c*x + d*y
+function transform(x,y){return{x:matrix[0]*x+matrix[1]*y,y:matrix[2]*x+matrix[3]*y};}
+function toCanvas(x,y){var cx=canvas.width/2,cy=canvas.height/2,s=Math.min(canvas.width,canvas.height)/8;return{x:cx+x*s,y:cy-y*s};}
+function draw(){var w=canvas.width,h=canvas.height,cx=w/2,cy=h/2,s=Math.min(w,h)/8;ctx.clearRect(0,0,w,h);ctx.strokeStyle='#f0f0f0';ctx.lineWidth=1;for(var i=-5;i<=5;i++){ctx.beginPath();ctx.moveTo(cx+i*s,0);ctx.lineTo(cx+i*s,h);ctx.stroke();ctx.beginPath();ctx.moveTo(0,cy+i*s);ctx.lineTo(w,cy+i*s);ctx.stroke();}ctx.strokeStyle='#999';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(w,cy);ctx.stroke();ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,h);ctx.stroke();drawBasisVectors();if(transformType==='exponential')drawExponential();else if(transformType==='logarithmic')drawLogarithmic();else if(transformType==='parabola')drawParabola();else if(transformType==='ellipse')drawEllipse();else if(transformType==='hyperbola')drawHyperbola();}
+function drawBasisVectors(){var iv=transform(1,0),is=toCanvas(0,0),ie=toCanvas(iv.x,iv.y);ctx.beginPath();ctx.moveTo(is.x,is.y);ctx.lineTo(ie.x,ie.y);ctx.strokeStyle='#ef4444';ctx.lineWidth=4;ctx.stroke();var a=Math.atan2(-iv.y,iv.x);ctx.beginPath();ctx.moveTo(ie.x,ie.y);ctx.lineTo(ie.x-15*Math.cos(a-0.4),ie.y-15*Math.sin(a-0.4));ctx.moveTo(ie.x,ie.y);ctx.lineTo(ie.x-15*Math.cos(a+0.4),ie.y-15*Math.sin(a+0.4));ctx.stroke();ctx.fillStyle='#ef4444';ctx.font='bold 20px Arial';ctx.fillText('î',ie.x+10,ie.y-10);var jv=transform(0,1),js=toCanvas(0,0),je=toCanvas(jv.x,jv.y);ctx.beginPath();ctx.moveTo(js.x,js.y);ctx.lineTo(je.x,je.y);ctx.strokeStyle='#10b981';ctx.lineWidth=4;ctx.stroke();var a2=Math.atan2(-jv.y,jv.x);ctx.beginPath();ctx.moveTo(je.x,je.y);ctx.lineTo(je.x-15*Math.cos(a2-0.4),je.y-15*Math.sin(a2-0.4));ctx.moveTo(je.x,je.y);ctx.lineTo(je.x-15*Math.cos(a2+0.4),je.y-15*Math.sin(a2+0.4));ctx.stroke();ctx.fillStyle='#10b981';ctx.fillText('ĵ',je.x+10,je.y-10);}
+function drawExponential(){ctx.beginPath();ctx.strokeStyle='#ef4444';ctx.lineWidth=3;for(var x=-4;x<=3;x+=0.05){var y=Math.pow(2,x);if(y>-5&&y<5){var p=transform(x,y),cp=toCanvas(p.x,p.y);if(x===-4)ctx.moveTo(cp.x,cp.y);else ctx.lineTo(cp.x,cp.y);}}ctx.stroke();ctx.fillStyle='#ef4444';ctx.font='bold 16px Arial';ctx.fillText('y = 2^x',toCanvas(2,4).x-30,toCanvas(2,4).y);}
+function drawLogarithmic(){ctx.beginPath();ctx.strokeStyle='#10b981';ctx.lineWidth=3;for(var x=0.05;x<=6;x+=0.05){var y=Math.log(x)/Math.log(2);if(y>-5&&y<5){var p=transform(x,y),cp=toCanvas(p.x,p.y);if(x===0.05)ctx.moveTo(cp.x,cp.y);else ctx.lineTo(cp.x,cp.y);}}ctx.stroke();ctx.fillStyle='#10b981';ctx.font='bold 16px Arial';ctx.fillText('y = log₂(x)',toCanvas(3,1.5).x-40,toCanvas(3,1.5).y);}
+function drawParabola(){ctx.beginPath();ctx.strokeStyle='#8b5cf6';ctx.lineWidth=3;for(var x=-3;x<=3;x+=0.02){var y=x*x/2;if(y>-5&&y<5){var p=transform(x,y),cp=toCanvas(p.x,p.y);if(x===-3)ctx.moveTo(cp.x,cp.y);else ctx.lineTo(cp.x,cp.y);}}ctx.stroke();ctx.fillStyle='#8b5cf6';ctx.font='bold 16px Arial';ctx.fillText('y = x²/2',toCanvas(-2.5,3).x-30,toCanvas(-2.5,3).y);}
+function drawEllipse(){ctx.beginPath();ctx.strokeStyle='#ec4899';ctx.lineWidth=3;for(var t=0;t<=Math.PI*2;t+=0.02){var x=2.5*Math.cos(t),y=1.5*Math.sin(t);var p=transform(x,y),cp=toCanvas(p.x,p.y);if(t===0)ctx.moveTo(cp.x,cp.y);else ctx.lineTo(cp.x,cp.y);}ctx.closePath();ctx.stroke();ctx.fillStyle='#ec4899';ctx.font='bold 16px Arial';ctx.fillText('x²/2.5² + y²/1.5² = 1',toCanvas(0,-2).x-60,toCanvas(0,-2).y);}
+function drawHyperbola(){ctx.strokeStyle='#f59e0b';ctx.lineWidth=3;ctx.beginPath();for(var t=-2;t<=2;t+=0.02){if(Math.abs(t)<0.1)continue;var x=Math.exp(t),y=Math.exp(-t);if(x>-5&&x<5&&y>-5&&y<5){var p=transform(x,y),cp=toCanvas(p.x,p.y);if(p.x===Math.exp(-2)&&p.y===Math.exp(2))ctx.moveTo(cp.x,cp.y);else ctx.lineTo(cp.x,cp.y);}}ctx.stroke();ctx.beginPath();for(var t=-2;t<=2;t+=0.02){if(Math.abs(t)<0.1)continue;var x=-Math.exp(t),y=-Math.exp(-t);if(x>-5&&x<5&&y>-5&&y<5){var p=transform(x,y),cp=toCanvas(p.x,p.y);if(p.x===-Math.exp(-2)&&p.y===-Math.exp(2))ctx.moveTo(cp.x,cp.y);else ctx.lineTo(cp.x,cp.y);}}ctx.stroke();ctx.fillStyle='#f59e0b';ctx.font='bold 16px Arial';ctx.fillText('xy = 1',toCanvas(2,-2).x-20,toCanvas(2,-2).y);}
+window.onload=init;
+</script>
+</body>
+</html>
